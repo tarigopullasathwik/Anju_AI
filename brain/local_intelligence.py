@@ -325,6 +325,6 @@ def get_intelligence_status() -> dict:
     return {
         "local_patterns": len(_INTENT_PATTERNS),
         "knowledge_base_entries": len(_KNOWLEDGE_BASE),
-        "online_capable": bool(os.getenv("GEMINI_API_KEY")),
+        "online_capable": bool(os.getenv("OPENROUTER_API_KEY")),
         "intents_supported": list(_INTENT_PATTERNS.keys()),
     }

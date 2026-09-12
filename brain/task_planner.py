@@ -240,17 +240,13 @@ def execute_task(user_prompt: str, action: str, params: dict) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 def plan_task(user_input: str) -> list[dict]:
     """
-    Uses Gemini to determine the required actions, with a robust keyword-based
-    fallback so commands still work even when Gemini is unclear or unavailable.
+    Uses OpenRouter to determine the required actions, with a robust keyword-based
+    fallback so commands still work even when it is unclear or unavailable.
     Returns a list of task objects (even for single tasks).
     """
-    api_key = os.getenv("GEMINI_API_KEY", "")
-    if not api_key or api_key == "your_gemini_api_key_here":
-        # No API key → use keyword fallback only
+    api_key = os.getenv("OPENROUTER_API_KEY", "")
+    if not api_key:
         return _keyword_fallback(user_input)
-
-    from google import genai  # lazy import — only needed when API key is present
-    client = genai.Client(api_key=api_key)
 
     # Escape user input for the prompt to avoid JSON issues
     safe_user_input = user_input.replace('"', '\\"')
@@ -303,14 +299,28 @@ User Input: "{{USER_INPUT}}"
         except: pass
 
     try:
-        # 2. Use APIHandler for robust calling with backoff
-        content, err = APIHandler.call_gemini_with_backoff(
-            client, "gemini-2.0-flash", prompt
-        )
+        import requests
+        openrouter_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": prompt
+                }
+            ]
+        }
 
-        if err:
-            print(f"Task Planning Error: {err} — falling back to keyword matching")
-            return _keyword_fallback(user_input)
+        resp = requests.post(f"{openrouter_url.rstrip('/')}/chat/completions", json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+        
+        result_json = resp.json()
+        content = result_json.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
 
         # Strip any accidental markdown fences
         content = re.sub(r"```[a-z]*\n?", "", content).replace("```", "").strip()

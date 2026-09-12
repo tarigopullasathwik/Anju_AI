@@ -56,15 +56,15 @@ def get_file_icon(category: str) -> str:
 
 def extract_image(filepath: str) -> dict:
     """
-    Uses Gemini Vision to analyze and fully describe the image.
+    Uses OpenRouter Vision to analyze and fully describe the image.
     Returns rich textual extraction.
     """
-    api_key = os.getenv("GEMINI_API_KEY", "")
+    api_key = os.getenv("OPENROUTER_API_KEY", "")
     if not api_key:
-        return {"error": "GEMINI_API_KEY not configured.", "content": ""}
+        return {"error": "OPENROUTER_API_KEY not configured.", "content": ""}
 
     try:
-        from google import genai
+        import requests
         ext = os.path.splitext(filepath)[1].lower()
         mime_map = {
             ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
@@ -75,8 +75,9 @@ def extract_image(filepath: str) -> dict:
 
         with open(filepath, "rb") as f:
             image_data = base64.b64encode(f.read()).decode("utf-8")
+            
+        data_uri = f"data:{mime_type};base64,{image_data}"
 
-        client = genai.Client(api_key=api_key)
         prompt = (
             "You are a professional image analyst for Anju AI. "
             "Analyze this image completely and extract ALL visible text, data, charts, "
@@ -85,17 +86,36 @@ def extract_image(filepath: str) -> dict:
             "[Text Found], [Objects & Scene], [Data & Numbers], [Colors & Design], [Overall Summary]. "
             "Be extremely thorough and detailed."
         )
-        contents = [
-            prompt,
-            {"inline_data": {"mime_type": mime_type, "data": image_data}}
-        ]
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=contents
-        )
+        
+        openrouter_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "google/gemini-2.5-flash",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": data_uri}}
+                    ]
+                }
+            ]
+        }
+
+        resp = requests.post(f"{openrouter_url.rstrip('/')}/chat/completions", json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+        
+        result_json = resp.json()
+        response_text = result_json.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        
         return {
-            "content": response.text,
-            "preview": response.text[:300] + "..." if len(response.text) > 300 else response.text,
+            "content": response_text,
+            "preview": response_text[:300] + "..." if len(response_text) > 300 else response_text,
             "error": None
         }
     except Exception as e:

@@ -363,10 +363,6 @@ def respond(text: str, image=None, emotion=None):
     return text
 
 def _call_gemini(user_input: str) -> dict:
-    api_key = os.getenv("GEMINI_API_KEY", "")
-    if not api_key: return {"action": "chat", "params": {}, "response": "API Key Missing."}
-    from google import genai
-
     # 1. Try Cache First
     cache_key = f"gemini_unified_{user_input}"
     cached = APIHandler.get_cache(cache_key)
@@ -464,20 +460,19 @@ JSON FORMAT:
   "emotion_override": "happy|sad|stressed|neutral"
 }}
 """
-    # Model Routing Priorities (Confirmed working: gemini-flash-latest)
-    models = ["gemini-flash-latest", "gemini-2.0-flash"]
+    # Model Routing via OpenRouter (nvidia/nemotron is configured and working)
+    OPENROUTER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 
     # 2. INTELLIGENT MODEL ROUTING (Complexity Awareness)
     complex_keywords = ["script", "code", "explain", "design", "calculate", "analyze", "why", "how", "create", "write"]
     is_complex = any(kw in user_input.lower() for kw in complex_keywords) or len(user_input) > 60
 
     if is_complex:
-        models = ["gemini-2.0-flash", "gemini-flash-latest"]
-        print(f"[Brain] Task Complexity: High -> Routing to Advanced Models")
+        print(f"[Brain] Task Complexity: High -> Routing to OpenRouter (nemotron)")
     else:
-        models = ["gemini-flash-latest", "gemini-2.0-flash"]
-        print(f"[Brain] Task Complexity: Standard -> Routing to Eco Models")
+        print(f"[Brain] Task Complexity: Standard -> Routing to OpenRouter (nemotron)")
 
+    models = [OPENROUTER_MODEL]
     text, err = APIHandler.call_brain_service(user_input, system_prompt, model_routing=models)
 
     if not err and text:
