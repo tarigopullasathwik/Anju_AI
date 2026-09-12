@@ -1,12 +1,15 @@
+import os
 import time
 import random
 import json
-import os
 import sqlite3
 import hashlib
 from datetime import datetime, timedelta
-
-# Unified Database Path
+import dotenv
+from utils.tokenrouter_client import TokenRouterClient
+# Load environment variables from .env
+dotenv.load_dotenv()
+import requests
 DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "memory")
 DB_PATH = os.path.join(DB_DIR, "anju_memory.db")
 
@@ -275,52 +278,97 @@ class APIHandler:
         Dispatches the main Gemini brain routing.
         Features dynamic cost estimation, cost trackers, and automatic model failover.
         """
-        from google import genai
-        api_key = os.getenv("GEMINI_API_KEY", "")
-        if not api_key:
-            return None, "GEMINI_API_KEY missing from environment vars."
-
+        # Use TokenRouter for brain conversation (free model)
+        if not model_routing:
+            model_routing = ["default"]
         start_time = time.time()
         # Compute input tokens estimate (1 token ~ 4 chars)
         input_tokens = len(system_prompt + user_input) // 4
 
-        # Dispatch with failover routing
-        for model in model_routing:
+        try:
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ]
+            # If model_routing specifies "default", let the client choose its default model
+            model_param = None if model_routing[0] == "default" else model_routing[0]
+            resp = TokenRouterClient.chat_completion(messages, model=model_param)
+            # If the response contains an error field, treat as failure
+            if isinstance(resp, dict) and resp.get("error"):
+                raise Exception(resp.get("error"))
+            text_response = resp.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            latency = time.time() - start_time
+            output_tokens = len(text_response) // 4
+            total_tokens = input_tokens + output_tokens
+            cost = resp.get("usage", {}).get("total_cost", 0.0) if isinstance(resp, dict) else 0.0
+            APIHandler.log_api_call("brain", latency, tokens_used=total_tokens, cost_usd=cost, status="success")
+            APIHandler.update_metric('total_tokens_sent', input_tokens)
+            return text_response, None
+        except Exception as e:
+            err_str = str(e)
+            print(f"[APIHandler] TokenRouter brain error: {err_str}")
+            # Attempt OpenAI fallback if configured
             try:
-                client = genai.Client(api_key=api_key)
-                print(f"[APIHandler] Dispatching Brain -> {model}")
-
-                # Minimum throttle spacing to prevent immediate resource limits
-                time.sleep(0.3)
-
-                response = client.models.generate_content(
+                # OpenRouter integration for specific model
+                if model_routing[0] == "nvidia/nemotron-3-ultra-550b-a55b:free":
+                    # Use OpenRouter API
+                    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+                    if not openrouter_key:
+                        raise ValueError("OPENROUTER_API_KEY missing for OpenRouter usage")
+                    openrouter_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+                    temperature = 0.7  # Default temperature
+                    # Build request payload
+                    openrouter_payload = {
+                        "model": model_routing[0],
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": 1024,
+                    }
+                    headers = {
+                        "Authorization": f"Bearer {openrouter_key}",
+                        "Content-Type": "application/json",
+                    }
+                    try:
+                        resp = requests.post(f"{openrouter_url.rstrip('/')}/chat/completions", json=openrouter_payload, headers=headers, timeout=30)
+                        resp.raise_for_status()
+                        openrouter_resp = resp.json()
+                    except requests.HTTPError as http_err:
+                        raise Exception(str(http_err))
+                    text_response = openrouter_resp.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                    latency = time.time() - start_time
+                    output_tokens = len(text_response) // 4
+                    total_tokens = input_tokens + output_tokens
+                    cost = 0.0  # Cost tracking not implemented for OpenRouter
+                    APIHandler.log_api_call("brain_openrouter", latency, tokens_used=total_tokens, cost_usd=cost, status="success")
+                    APIHandler.update_metric('total_tokens_sent', input_tokens)
+                    return text_response, None
+                # OpenAI fallback (legacy)
+                import openai
+                openai_api_key = os.getenv("OPENAI_API_KEY")
+                if not openai_api_key:
+                    raise ValueError("OPENAI_API_KEY missing for fallback")
+                openai.api_key = openai_api_key
+                model = os.getenv("OPENAI_DEFAULT_MODEL", "gpt-3.5-turbo")
+                openai_resp = openai.ChatCompletion.create(
                     model=model,
-                    contents=f"{system_prompt}\nUser: {user_input}\nJSON:",
-                    config={'temperature': 0.7}
+                    messages=messages,
+                    temperature=0.7,
                 )
-
-                text_response = response.text.strip()
+                text_response = openai_resp.choices[0].message.content.strip()
                 latency = time.time() - start_time
                 output_tokens = len(text_response) // 4
                 total_tokens = input_tokens + output_tokens
-
-                # Cost calculation: $0.075 / M input tokens, $0.30 / M output tokens
-                cost = (input_tokens * 0.000000075) + (output_tokens * 0.0000003)
-
-                APIHandler.log_api_call("brain", latency, tokens_used=total_tokens, cost_usd=cost, status="success")
+                cost = 0.0
+                APIHandler.log_api_call("brain_fallback", latency, tokens_used=total_tokens, cost_usd=cost, status="success")
                 APIHandler.update_metric('total_tokens_sent', input_tokens)
-
                 return text_response, None
-
-            except Exception as e:
-                err_str = str(e)
-                print(f"[APIHandler] Brain failover triggered. Model '{model}' err: {err_str[:40]}")
-                APIHandler.log_issue("Model Failure", err_str, f"Fallback to next model in sequence")
+            except Exception as fallback_err:
+                fallback_str = str(fallback_err)
+                APIHandler.log_issue("Brain Fallback Error", fallback_str, "OpenAI fallback failed")
                 APIHandler.update_metric('errors_prevented')
-
-        latency = time.time() - start_time
-        APIHandler.log_api_call("brain", latency, status="failed", error_message="All brain models failed.")
-        return None, "All models failed or rate-limited."
+                latency = time.time() - start_time
+                APIHandler.log_api_call("brain", latency, status="failed", error_message=err_str + " | fallback: " + fallback_str)
+                return None, f"Brain request failed: {err_str} (fallback error: {fallback_str})"
 
     @staticmethod
     def call_voice_service(text: str) -> tuple:

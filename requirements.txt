@@ -1,7 +1,7 @@
 # ── Core AI / LLM ─────────────────────────────────────────────────────────────
 google-genai==1.2.0
 google-generativeai==0.4.1
-openai==1.14.0
+openai==0.28
 
 # ── Web Server & Real-Time UI ─────────────────────────────────────────────────
 flask==3.1.3
