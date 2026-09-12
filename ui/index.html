@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ANJU AI — PERSONAL COMPANION</title>
+  <meta name="description" content="Anju AI — Your personal intelligent companion. Upload files, chat, and get AI-powered analysis.">
+  <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #050505;
+      --panel: rgba(20, 20, 20, 0.8);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #00f2ff;
+      --accent2: #7b5ea7;
+      --accent-green: #00ffaa;
+      --accent-orange: #ff9500;
+      --text: #ffffff;
+      --muted: #a0a0a0;
+      --upload-glow: rgba(0, 242, 255, 0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      background-image: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #050505 100%);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 280px;
+      padding: 40px 25px;
+      background: rgba(10, 10, 10, 0.9);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      backdrop-filter: blur(20px);
+      overflow-y: auto;
+    }
+
+    .logo-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .visualizer {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .visualizer-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      opacity: 0.2;
+      animation: ripple 3s infinite;
+    }
+
+    .visualizer-core {
+      width: 20px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 20px var(--accent);
+      transition: all 0.5s ease;
+    }
+
+    @keyframes ripple {
+      0% { transform: scale(0.8); opacity: 0.5; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+
+    /* ── Sidebar: Uploaded Files Panel ── */
+    .files-panel {
+      background: #0d0d0d;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .files-panel-title {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .files-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .file-chip-sidebar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(0, 242, 255, 0.05);
+      border: 1px solid rgba(0, 242, 255, 0.1);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      animation: chipIn 0.3s ease-out;
+    }
+
+    .file-chip-sidebar:hover {
+      background: rgba(0, 242, 255, 0.1);
+      border-color: rgba(0, 242, 255, 0.25);
+    }
+
+    @keyframes chipIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .file-chip-icon { font-size: 18px; flex-shrink: 0; }
+
+    .file-chip-info { flex: 1; min-width: 0; }
+    .file-chip-name {
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--accent);
+    }
+    .file-chip-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .files-empty {
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+      padding: 20px 0;
+      opacity: 0.6;
+    }
+
+    /* ── Main Area ── */
+    .main { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+
+    header {
+      padding: 25px 50px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: rgba(5, 5, 5, 0.8);
+      flex-shrink: 0;
+    }
+
+    .system-title {
+      font-family: 'Syncopate', sans-serif;
+      letter-spacing: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+    }
+
+    /* ── Chat ── */
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 50px;
+      display: flex;
+      flex-direction: column;
+      gap: 35px;
+      scroll-behavior: auto;
+    }
+
+    .msg { display: flex; gap: 20px; max-width: 80%; animation: slideIn 0.4s ease-out; }
+    .msg.you { align-self: flex-end; flex-direction: row-reverse; }
+
+    .bubble {
+      padding: 20px 25px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      line-height: 1.7;
+      font-size: 15px;
+      color: #dfdfdf;
+    }
+
+    .msg.you .bubble { background: #ffffff; color: #000000; border: none; }
+
+    .avatar {
+      width: 38px; height: 38px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800; background: #222; color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* ── File Message Bubble ── */
+    .file-msg-bubble {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, rgba(0,242,255,0.06) 0%, rgba(123,94,167,0.06) 100%);
+      border: 1px solid rgba(0,242,255,0.2);
+      border-radius: 16px;
+      animation: slideIn 0.4s ease-out;
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+    }
+    .file-msg-bubble::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+      border-radius: 2px 0 0 2px;
+    }
+    .file-msg-icon { font-size: 28px; flex-shrink: 0; }
+    .file-msg-info { flex: 1; }
+    .file-msg-name { font-size: 13px; font-weight: 700; color: var(--accent); }
+    .file-msg-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .file-msg-scanning {
+      font-size: 11px;
+      color: var(--accent);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .scan-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: scanPulse 0.8s infinite alternate;
+    }
+    @keyframes scanPulse {
+      from { opacity: 1; transform: scale(1); }
+      to { opacity: 0.3; transform: scale(0.6); }
+    }
+
+    .file-scan-done {
+      color: var(--accent-green) !important;
+    }
+
+    /* ── Footer & Input ── */
+    footer {
+      padding: 20px 60px 40px;
+      background: linear-gradient(transparent, var(--bg));
+      flex-shrink: 0;
+    }
+
+    /* Active file context indicator */
+    .file-context-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, rgba(0,242,255,0.08), rgba(123,94,167,0.08));
+      border: 1px solid rgba(0,242,255,0.15);
+      border-radius: 12px;
+      font-size: 12px;
+      color: var(--accent);
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .file-context-bar.visible { display: flex; }
+    .file-context-bar span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-context-bar button {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 14px;
+      padding: 0 4px;
+      transition: color 0.2s;
+    }
+    .file-context-bar button:hover { color: white; }
+
+    /* Upload progress bar */
+    .upload-progress {
+      display: none;
+      height: 2px;
+      background: rgba(0,242,255,0.1);
+      border-radius: 2px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .upload-progress.active { display: block; }
+    .upload-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 2px;
+    }
+    .upload-progress-bar.indeterminate {
+      width: 40%;
+      animation: progressSlide 1.2s infinite ease-in-out;
+    }
+    @keyframes progressSlide {
+      0% { transform: translateX(-150%); }
+      100% { transform: translateX(350%); }
+    }
+
+    .input-box {
+      display: flex;
+      gap: 14px;
+      background: #111;
+      border: 1px solid var(--border);
+      padding: 14px 22px;
+      border-radius: 100px;
+      align-items: center;
+      transition: border-color 0.3s ease;
+    }
+    .input-box:focus-within { border-color: rgba(0,242,255,0.3); }
+
+    textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: white;
+      resize: none;
+      font-size: 15px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      max-height: 120px;
+    }
+
+    /* File upload button (paperclip) */
+    .upload-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .upload-btn:hover {
+      color: var(--accent);
+      background: rgba(0,242,255,0.08);
+    }
+    .upload-btn.active { color: var(--accent); }
+
+    #send-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--accent);
+      padding: 4px;
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+    }
+    #send-btn:hover { opacity: 0.7; }
+
+    /* ── Drag-and-Drop Overlay ── */
+    #drop-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 8888;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #drop-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .drop-zone {
+      width: 480px;
+      height: 300px;
+      border: 2px dashed var(--accent);
+      border-radius: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: rgba(0, 242, 255, 0.04);
+      box-shadow: 0 0 80px rgba(0, 242, 255, 0.12), inset 0 0 40px rgba(0, 242, 255, 0.03);
+      animation: dropPulse 2s ease-in-out infinite;
+      transition: all 0.2s ease;
+    }
+    .drop-zone.drag-over {
+      background: rgba(0, 242, 255, 0.1);
+      box-shadow: 0 0 120px rgba(0, 242, 255, 0.25), inset 0 0 60px rgba(0, 242, 255, 0.08);
+      border-color: #00ffff;
+      transform: scale(1.02);
+    }
+    @keyframes dropPulse {
+      0%, 100% { box-shadow: 0 0 60px rgba(0,242,255,0.1), inset 0 0 30px rgba(0,242,255,0.03); }
+      50% { box-shadow: 0 0 100px rgba(0,242,255,0.2), inset 0 0 50px rgba(0,242,255,0.06); }
+    }
+    .drop-icon {
+      font-size: 56px;
+      filter: drop-shadow(0 0 20px var(--accent));
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    .drop-title {
+      font-family: 'Syncopate', sans-serif;
+      font-size: 16px;
+      letter-spacing: 3px;
+      color: var(--accent);
+    }
+    .drop-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .drop-types {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 4px;
+    }
+    .drop-tag {
+      padding: 4px 10px;
+      background: rgba(0,242,255,0.08);
+      border: 1px solid rgba(0,242,255,0.15);
+      border-radius: 20px;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Status components ── */
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #222; border-radius: 34px; transition: .4s; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: #444; border-radius: 50%; transition: .4s; }
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(20px); background-color: white; }
+
+    @keyframes slideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── File type color theming ── */
+    .cat-image  { --cat-color: #00f2ff; }
+    .cat-pdf    { --cat-color: #ff4b4b; }
+    .cat-word   { --cat-color: #4b9fff; }
+    .cat-excel  { --cat-color: #00c964; }
+    .cat-powerpoint { --cat-color: #ff9500; }
+    .cat-text   { --cat-color: #b89aff; }
+
+    /* ── Scanning animation overlay on image previews ── */
+    .scan-overlay {
+      position: relative;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+    .scan-overlay::after {
+      content: '';
+      position: absolute;
+      top: -100%;
+      left: 0;
+      width: 100%;
+      height: 30px;
+      background: linear-gradient(transparent, rgba(0,242,255,0.3), transparent);
+      animation: scanLine 1.5s linear infinite;
+    }
+    @keyframes scanLine {
+      from { top: -30px; }
+      to { top: 100%; }
+    }
+
+    /* ── Scrollbar Styling ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,242,255,0.3); }
+
+    /* ── Typing Indicator ── */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      max-width: 140px;
+      margin-bottom: 0;
+      animation: slideIn 0.3s ease-out;
+    }
+    .typing-dots {
+      display: flex;
+      gap: 5px;
+    }
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: typingBounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+      30% { transform: translateY(-8px); opacity: 1; }
+    }
+
+    /* ── Message Timestamp ── */
+    .msg-timestamp {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 6px;
+      opacity: 0.5;
+      text-align: right;
+    }
+    .msg.you .msg-timestamp {
+      text-align: left;
+    }
+
+    /* ── Scroll-to-Bottom Button ── */
+    #scroll-bottom-btn {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: all 0.3s ease;
+      font-size: 18px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    #scroll-bottom-btn:hover {
+      background: rgba(0,242,255,0.15);
+      border-color: var(--accent);
+      transform: translateX(-50%) scale(1.1);
+    }
+    #scroll-bottom-btn.visible {
+      display: flex;
+      animation: slideUp 0.3s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* ── Voice Engine Status Bar ── */
+    .voice-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: #0d0d0d;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .voice-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      flex-shrink: 0;
+    }
+    .voice-status-dot.inactive {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+  <!-- ── SIDEBAR ── -->
+  <div class="sidebar">
+    <div class="logo-container">
+      <div class="visualizer" id="visualizer">
+        <div class="visualizer-ring"></div>
+        <div class="visualizer-core"></div>
+      </div>
+      <h2 style="font-family: 'Syncopate', sans-serif; letter-spacing: 4px; font-size: 12px; font-weight:700;">ANJU AI</h2>
+    </div>
+
+    <!-- Voice Engine Toggle -->
+    <div style="background: #111; padding: 20px; border-radius: 15px; border: 1px solid var(--border);">
+      <h4 style="font-size: 10px; color: var(--muted); letter-spacing: 2px; margin-bottom: 15px;">VOICE ENGINE</h4>
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 12px; font-weight:600;">ACTIVE OUTPUT</span>
+        <label class="switch"><input type="checkbox" id="speak-toggle"><span class="slider"></span></label>
+      </div>
+      <div class="voice-status" style="margin-top: 12px;">
+        <div class="voice-status-dot" id="voice-status-dot"></div>
+        <span id="voice-status-label">Voice engine ready</span>
+      </div>
+    </div>
+
+    <!-- Phone Control Panel -->
+    <div style="background: #111; padding: 20px; border-radius: 15px; border: 1px solid var(--border);">
+      <h4 style="font-size: 10px; color: var(--muted); letter-spacing: 2px; margin-bottom: 15px;">📱 PHONE LINK</h4>
+      <div class="voice-status">
+        <div class="voice-status-dot inactive" id="phone-status-dot"></div>
+        <span id="phone-status-label" style="font-size: 11px;">Phone disconnected</span>
+      </div>
+      <div style="margin-top: 10px; display: flex; gap: 6px;">
+        <button id="phone-connect-btn" style="flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:#0d0d0d; color:var(--accent); font-size:10px; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; transition:all 0.2s;" 
+          onmouseover="this.style.background='rgba(0,242,255,0.1)'" 
+          onmouseout="this.style.background='#0d0d0d'">Connect</button>
+        <button id="phone-disconnect-btn" style="flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:#0d0d0d; color:#ff4b4b; font-size:10px; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; transition:all 0.2s;"
+          onmouseover="this.style.background='rgba(255,75,75,0.1)'" 
+          onmouseout="this.style.background='#0d0d0d'">Disconnect</button>
+      </div>
+    </div>
+
+    <!-- Uploaded Files Panel -->
+    <div class="files-panel">
+      <div class="files-panel-title">📁 UPLOADED FILES</div>
+      <div class="files-list" id="files-list">
+        <div class="files-empty" id="files-empty">No files uploaded yet.<br>Click 📎 to upload.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MAIN CONTENT ── -->
+  <div class="main">
+    <header>
+      <div class="system-title">ANJU V2.0</div>
+      <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight:600;">
+        <span id="status-label">SYS_IDLE</span>
+        <div class="status-dot" id="status-dot"></div>
+      </div>
+    </header>
+
+    <div class="chat" id="chat" style="position: relative;">
+      <div style="margin: auto; text-align: center; max-width: 600px;">
+        <h1 style="font-family: 'Syncopate', sans-serif; font-size: 32px; margin-bottom: 25px;">ANJU AI</h1>
+        <p style="color: var(--muted); font-size: 16px; line-height: 1.8;">Hello, Sathwik. I am your personal AI companion. My protocols are synchronized. How can I assist you today?</p>
+        <p style="color: rgba(0,242,255,0.5); font-size: 12px; margin-top: 20px; letter-spacing: 1px;">📎 Upload any file — images, docs, PDFs, spreadsheets, code — and I'll analyze it instantly.</p>
+      </div>
+      <button id="scroll-bottom-btn" title="Scroll to bottom">⬇</button>
+    </div>
+
+    <!-- ── FOOTER / INPUT AREA ── -->
+    <footer>
+      <!-- File Context Indicator -->
+      <div class="file-context-bar" id="file-context-bar">
+        <span id="file-context-label">📎 No file loaded</span>
+        <button id="clear-file-btn" title="Clear file context">✕</button>
+      </div>
+
+      <!-- Upload Progress -->
+      <div class="upload-progress" id="upload-progress">
+        <div class="upload-progress-bar indeterminate" id="upload-progress-bar"></div>
+      </div>
+
+      <!-- Input Box -->
+      <div class="input-box" id="input-box">
+        <!-- Paperclip upload button -->
+        <button class="upload-btn" id="upload-btn" title="Upload file (images, docs, PDFs, Excel, PowerPoint, code...)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+          </svg>
+        </button>
+
+        <textarea id="user-input" placeholder="Communicate with Anju... or upload a file to analyze" rows="1"></textarea>
+
+        <button id="send-btn" title="Send message">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+
+      <!-- Hidden file input -->
+      <input type="file" id="file-input" style="display:none"
+        accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.md,.py,.js,.ts,.html,.css,.csv,.json,.yaml,.yml,.xml,.sh,.bat,.c,.cpp,.java,.rs,.go,.rb,.php,.sql,.log">
+    </footer>
+  </div>
+
+  <!-- ── DRAG AND DROP OVERLAY ── -->
+  <div id="drop-overlay">
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-icon">📂</div>
+      <div class="drop-title">DROP YOUR FILE</div>
+      <div class="drop-subtitle">Anju will scan and extract everything</div>
+      <div class="drop-types">
+        <span class="drop-tag">🖼️ Images</span>
+        <span class="drop-tag">📄 PDF</span>
+        <span class="drop-tag">📝 Word</span>
+        <span class="drop-tag">📊 Excel</span>
+        <span class="drop-tag">📑 PowerPoint</span>
+        <span class="drop-tag">📃 Text/Code</span>
+        <span class="drop-tag">📋 CSV / JSON</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── INIT OVERLAY ── -->
+  <div id="init-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer;">
+    <h1 style="font-family: 'Syncopate', sans-serif; color:var(--accent); margin-bottom:20px;">ANJU AI</h1>
+    <p style="color:white; font-size:14px; letter-spacing:2px;">CLICK TO INITIALIZE AUDIO PROTOCOLS</p>
+  </div>
+
+<script>
+  let ws;
+  let isSpeaking = false;
+  let currentAudio = null;
+  let audioCtx = null;
+  let animationFrameId = null;
+  let simulationIntervalId = null;
+  let lastText = "";
+  let lastEmotion = "";
+
+  // File upload state
+  let activeFileContext = null; // Currently active scanned file
+  let uploadedFiles = [];       // List of uploaded file records
+  let currentScanMsgEl = null; // DOM element of the scanning message
+
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('user-input');
+  const speakToggle = document.getElementById('speak-toggle');
+  const statusDot = document.getElementById('status-dot');
+  const statusLabel = document.getElementById('status-label');
+  const core = document.querySelector('.visualizer-core');
+  const fileInput = document.getElementById('file-input');
+  const uploadBtn = document.getElementById('upload-btn');
+  const dropOverlay = document.getElementById('drop-overlay');
+  const dropZone = document.getElementById('drop-zone');
+  const fileContextBar = document.getElementById('file-context-bar');
+  const fileContextLabel = document.getElementById('file-context-label');
+  const filesList = document.getElementById('files-list');
+  const filesEmpty = document.getElementById('files-empty');
+  const uploadProgress = document.getElementById('upload-progress');
+  const clearFileBtn = document.getElementById('clear-file-btn');
+
+  // 🎙️ Voice State Machine
+  let recognition = null;
+  let recognitionActive = false;
+  let activeDialogue = false;
+  let dialogueTimeout = null;
+  let speechQueue = [];
+  let currentUtteranceIndex = 0;
+
+  // 🔊 Lazy initialization of AudioContext
+  function getAudioContext() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  // 🎵 Synthesized Cinematic Sound Effects (Web Audio API)
+  function playStartupSound() {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    
+    osc1.type = 'sawtooth';
+    osc2.type = 'sine';
+    
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(80, now);
+    filter.frequency.exponentialRampToValueAtTime(1400, now + 1.6);
+    
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.18, now + 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+    
+    osc1.frequency.setValueAtTime(100, now);
+    osc1.frequency.exponentialRampToValueAtTime(320, now + 1.6);
+    
+    osc2.frequency.setValueAtTime(100.5, now);
+    osc2.frequency.exponentialRampToValueAtTime(321, now + 1.6);
+    
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 1.8);
+    osc2.stop(now + 1.8);
+    
+    setTimeout(() => {
+        const chimeGain = ctx.createGain();
+        chimeGain.gain.setValueAtTime(0.12, ctx.currentTime);
+        chimeGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
+        
+        const frequencies = [880, 1100, 1320, 1760];
+        frequencies.forEach(f => {
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, ctx.currentTime);
+            osc.connect(chimeGain);
+            osc.start();
+            osc.stop(ctx.currentTime + 1.8);
+        });
+        
+        chimeGain.connect(ctx.destination);
+    }, 1200);
+  }
+
+  function playUploadSound() {
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      
+      [440, 550, 660].forEach((f, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, now + i * 0.08);
+        osc.connect(gain);
+        osc.start(now + i * 0.08);
+        osc.stop(now + i * 0.08 + 0.3);
+      });
+      gain.connect(ctx.destination);
+    } catch(e) {}
+  }
+
+  function playScanCompleteSound() {
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      
+      [660, 880, 1100, 1320].forEach((f, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, now + i * 0.07);
+        osc.connect(gain);
+        osc.start(now + i * 0.07);
+        osc.stop(now + i * 0.07 + 0.25);
+      });
+      gain.connect(ctx.destination);
+    } catch(e) {}
+  }
+
+  function playWakeSound() {
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(523.25, now);
+      osc1.frequency.exponentialRampToValueAtTime(1046.50, now + 0.15);
+      
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(659.25, now);
+      osc2.frequency.exponentialRampToValueAtTime(1318.51, now + 0.15);
+      
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.35);
+      osc2.stop(now + 0.35);
+    } catch(e) {}
+  }
+
+  function playListeningSound() {
+    try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1300, now);
+        osc.frequency.exponentialRampToValueAtTime(1900, now + 0.12);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+        
+        setTimeout(() => {
+            const gain2 = ctx.createGain();
+            gain2.gain.setValueAtTime(0.04, ctx.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+            
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1600, ctx.currentTime);
+            osc2.frequency.exponentialRampToValueAtTime(2300, ctx.currentTime + 0.1);
+            
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.start();
+            osc2.stop(ctx.currentTime + 0.2);
+        }, 60);
+    } catch(e) {}
+  }
+
+  function playProcessingSound() {
+    try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.04, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(950, now);
+        osc.frequency.exponentialRampToValueAtTime(450, now + 0.2);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+    } catch(e) {}
+  }
+
+  function playInterruptSound() {
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(440, now + 0.1);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch(e) {}
+  }
+
+  // 🛑 Interruption Control
+  // 🔊 Voice Status Updates
+  function updateVoiceStatus(active, label) {
+    const dot = document.getElementById('voice-status-dot');
+    const lbl = document.getElementById('voice-status-label');
+    if (dot) dot.className = 'voice-status-dot' + (active ? '' : ' inactive');
+    if (lbl) lbl.textContent = label || (active ? 'Voice engine active' : 'Voice engine off');
+  }
+
+  // 🛑 Chrome Speech Synthesis Bug Fix: restart engine if it hangs
+  let speechSynthesisStalled = false;
+  function ensureSpeechSynthesis() {
+    if (!window.speechSynthesis) return;
+    // Chrome bug: speech synthesis stops working after cancel() in some versions
+    if (speechSynthesisStalled) {
+      try {
+        window.speechSynthesis.cancel();
+        // Re-get voices to kickstart the engine
+        window.speechSynthesis.getVoices();
+        speechSynthesisStalled = false;
+      } catch(e) {}
+    }
+  }
+
+  function stopSpeaking() {
+    isSpeaking = false;
+    speechQueue = [];
+    currentUtteranceIndex = 0;
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        // Chrome bug workaround: mark as potentially stalled
+        speechSynthesisStalled = true;
+        setTimeout(ensureSpeechSynthesis, 100);
+    }
+    if (currentAudio) {
+        try {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+        } catch(e){}
+        currentAudio = null;
+    }
+    resetVisualizer();
+    updateVoiceStatus(false, 'Voice idle');
+  }
+
+  // 🔊 Audio Playback (Neural Premium) — Full Warmth, No Filter
+  function playNeuralAudio(base64Data, originalText, emotion) {
+    stopSpeaking();
+    isSpeaking = true;
+    lastText = originalText;
+    lastEmotion = emotion;
+    updateVoiceStatus(true, 'Speaking (Neural)');
+
+    try {
+        const binary = atob(base64Data);
+        const array = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            array[i] = binary.charCodeAt(i);
+        }
+        const blob = new Blob([array], {type: 'audio/mp3'});
+        const url = URL.createObjectURL(blob);
+        
+        const audio = new Audio(url);
+        currentAudio = audio;
+        
+        const ctx = getAudioContext();
+        const source = ctx.createMediaElementSource(audio);
+        
+        // Gentle EQ for clarity: slight low-shelf boost for warmth
+        // and slight high-shelf for clarity — NO destructive highpass filter
+        const lowShelf = ctx.createBiquadFilter();
+        lowShelf.type = 'lowshelf';
+        lowShelf.frequency.setValueAtTime(200, ctx.currentTime);
+        lowShelf.gain.setValueAtTime(1.5, ctx.currentTime);
+        
+        const highShelf = ctx.createBiquadFilter();
+        highShelf.type = 'highshelf';
+        highShelf.frequency.setValueAtTime(6000, ctx.currentTime);
+        highShelf.gain.setValueAtTime(1.0, ctx.currentTime);
+        
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 64;
+        
+        // Warm, natural path: source → lowShelf → highShelf → analyser → speakers
+        source.connect(lowShelf);
+        lowShelf.connect(highShelf);
+        highShelf.connect(analyser);
+        analyser.connect(ctx.destination);
+        
+        animateVisualizer(analyser);
+        
+        audio.play().catch(err => {
+            console.warn("[TTS] Neural playback failed (no browser speech fallback):", err);
+            // No fallback — clean silence is better than dual voice
+            isSpeaking = false;
+            resetVisualizer();
+            updateVoiceStatus(false, 'Voice unavailable');
+        });
+        
+        audio.onended = () => {
+            isSpeaking = false;
+            currentAudio = null;
+            URL.revokeObjectURL(url);
+            resetVisualizer();
+            updateVoiceStatus(false, 'Voice idle');
+        };
+        
+        audio.onerror = (e) => {
+            console.error("[TTS] Neural playback stream error (no fallback):", e);
+            isSpeaking = false;
+            currentAudio = null;
+            URL.revokeObjectURL(url);
+            resetVisualizer();
+            updateVoiceStatus(false, 'Voice unavailable');
+        };
+    } catch (e) {
+        console.error("[TTS] Base64 audio parsing failed (no fallback):", e);
+        isSpeaking = false;
+        resetVisualizer();
+        updateVoiceStatus(false, 'Voice unavailable');
+    }
+  }
+
+  // 🎙️ Speech Sanitization — Minimal, preserves natural word pronunciation
+  function sanitizeTextForVoice(text) {
+    if (!text) return "";
+    let clean = text;
+    
+    // Remove code blocks but keep descriptive text
+    if (clean.includes("```")) {
+      clean = clean.replace(/```[\s\S]*?```/g, " [Code shown on screen] ");
+    }
+    
+    // Minimal sanitization — preserve word shapes for better pronunciation
+    clean = clean.replace(/<[^>]*>/g, ' ')
+                 .replace(/\*\*|__/g, '')
+                 .replace(/\*|_/g, '')
+                 .replace(/`([^`]+)`/g, '$1')
+                 .replace(/#+\s+/g, '')
+                 .replace(/https?:\/\/\S+/g, 'link');
+    
+    // Keep hyphenated words intact — they are easier for TTS to pronounce
+    
+    // Only expand symbols that cause clear mispronunciation
+    clean = clean.replace(/&amp;/g, ' and ')
+                 .replace(/&lt;/g, ' less than ')
+                 .replace(/&gt;/g, ' greater than ');
+    
+    // Gentle abbreviation expansion — only common ones
+    clean = clean.replace(/\bgui\b/ig, 'gooey')
+                 .replace(/\bjenkins\b/ig, 'jenkins')
+                 .replace(/\bgithub\b/ig, 'git hub')
+                 .replace(/\bgitlab\b/ig, 'git lab');
+    
+    // Normalize spaces only — don't replace hyphens or other symbols
+    clean = clean.replace(/\s+/g, ' ').trim();
+    
+    return clean;
+  }
+
+  // 🎙️ Premium Speech Queue
+  function playSpeechQueue(text, emotion) {
+    stopSpeaking();
+    isSpeaking = true;
+    lastText = text;
+    lastEmotion = emotion;
+
+    const cleanText = sanitizeTextForVoice(text);
+    if (!cleanText.trim()) {
+      isSpeaking = false;
+      return;
+    }
+
+    const parts = cleanText.split(/([.?!,;—]+|\.\.\.)/);
+    let chunks = [];
+    
+    for (let i = 0; i < parts.length; i += 2) {
+      let txt = parts[i] ? parts[i].trim() : '';
+      let punc = parts[i+1] ? parts[i+1] : '';
+      if (txt.length > 0) {
+        chunks.push({ text: txt, punctuation: punc });
+      }
+    }
+    
+    if (chunks.length === 0) {
+      isSpeaking = false;
+      return;
+    }
+    
+    speechQueue = chunks;
+    currentUtteranceIndex = 0;
+    speakNextChunk(emotion);
+  }
+
+  // 🎯 Best voice selection — prioritize clear, natural pronunciation
+  function selectBestVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+    
+    const isWin = navigator.platform.includes('Win');
+    
+    // Priority 1: Microsoft Natural voices (Windows 10/11) — excellent pronunciation
+    const msNatural = voices.find(v => 
+      v.name.includes('Microsoft') && v.name.includes('Natural') && v.lang.startsWith('en')
+    );
+    if (msNatural) return msNatural;
+    
+    // Priority 2: Microsoft David/Zira (Windows) — clear, reliable
+    const msDesktop = voices.find(v => 
+      v.name.includes('Microsoft') && v.lang.startsWith('en') && 
+      !v.name.includes('Mobile')
+    );
+    if (msDesktop) return msDesktop;
+    
+    // Priority 3: Google Wavenet voices (Chrome) — premium quality
+    const googleWavenet = voices.find(v => 
+      v.name.includes('Google') && v.lang.startsWith('en') && 
+      (v.name.includes('Wavenet') || v.name.includes('Neural2'))
+    );
+    if (googleWavenet) return googleWavenet;
+    
+    // Priority 4: Google Standard US/UK English
+    const googleStd = voices.find(v => 
+      v.name.startsWith('Google') && v.lang.startsWith('en') && 
+      (v.name.includes('US') || v.name.includes('UK'))
+    );
+    if (googleStd) return googleStd;
+    
+    // Priority 5: Any clear English female voice
+    const female = voices.find(v => 
+      v.lang.startsWith('en') && 
+      (v.name.toLowerCase().includes('samantha') || 
+       v.name.toLowerCase().includes('siri') ||
+       v.name.toLowerCase().includes('ari') ||
+       v.name.toLowerCase().includes('jenny') ||
+       v.name.toLowerCase().includes('zira') ||
+       v.name.toLowerCase().includes('google us english'))
+    );
+    if (female) return female;
+    
+    // Priority 6: Any English voice
+    const enVoice = voices.find(v => v.lang.startsWith('en'));
+    if (enVoice) return enVoice;
+    
+    // Last resort
+    return voices[0];
+  }
+
+  function speakNextChunk(emotion) {
+    if (!isSpeaking || currentUtteranceIndex >= speechQueue.length) {
+      isSpeaking = false;
+      resetVisualizer();
+      return;
+    }
+    
+    const chunk = speechQueue[currentUtteranceIndex];
+    const utterance = new SpeechSynthesisUtterance(chunk.text);
+    
+    const target = selectBestVoice();
+    if (target) utterance.voice = target;
+    
+    // Optimized rate/pitch defaults for maximum clarity
+    // Slower, clearer pace for maximum pronunciation accuracy
+    let rate = 0.82;
+    let pitch = 1.0;
+    
+    if (emotion === 'happy' || emotion === 'excited' || emotion === 'energetic') {
+      rate = 0.88;
+      pitch = 1.04;
+    } else if (emotion === 'sad' || emotion === 'lonely') {
+      rate = 0.78;
+      pitch = 0.96;
+    } else if (emotion === 'stressed') {
+      rate = 0.75;
+      pitch = 0.95;
+    }
+    
+    utterance.rate = rate;
+    utterance.pitch = pitch;
+    
+    utterance.onstart = () => {
+      simulateVisualizer();
+    };
+    
+    utterance.onend = () => {
+      if (!isSpeaking) return;
+      
+      let pauseDuration = 60;
+      const p = chunk.punctuation;
+      if (p.includes('.') || p.includes('!') || p.includes('?')) {
+        pauseDuration = emotion === 'stressed' ? 450 : 300;
+      } else if (p.includes('...')) {
+        pauseDuration = 500;
+      } else if (p.includes(',') || p.includes(';') || p.includes('—')) {
+        pauseDuration = 120;
+      }
+      
+      currentUtteranceIndex++;
+      setTimeout(() => {
+        speakNextChunk(emotion);
+      }, pauseDuration);
+    };
+    
+    utterance.onerror = (e) => {
+      console.warn("[TTS] Utterance error:", e);
+      currentUtteranceIndex++;
+      speakNextChunk(emotion);
+    };
+    
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // 🎙️ Browser Speech Recognition
+  function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn("[Speech] Web Speech API not supported in this browser.");
+      return;
+    }
+    
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = () => {
+      recognitionActive = true;
+      console.log("[Speech] Continuous Neural Listening Active.");
+    };
+    
+    recognition.onerror = (event) => {
+      console.warn("[Speech] Error:", event.error);
+      if (event.error === 'not-allowed') {
+        speakToggle.checked = false;
+        localStorage.setItem('speakResponses', 'false');
+        console.error("[Speech] Microphone access denied.");
+      }
+    };
+    
+    recognition.onend = () => {
+      recognitionActive = false;
+      console.log("[Speech] Listening cycle ended.");
+      if (speakToggle.checked) {
+        setTimeout(startSpeechRecognition, 300);
+      }
+    };
+    
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      
+      if (isSpeaking && (interimTranscript.trim().length > 1 || finalTranscript.trim().length > 1)) {
+        console.log("[Speech] User voice detected. Interrupting Anju.");
+        stopSpeaking();
+        playInterruptSound();
+      }
+      
+      if (finalTranscript.trim().length > 0) {
+        handleSpeechInput(finalTranscript.trim());
+      }
+    };
+  }
+
+  function startSpeechRecognition() {
+    if (!recognition) initSpeechRecognition();
+    if (recognition && !recognitionActive) {
+      try {
+        recognition.start();
+        updateVisualState("Standing By");
+      } catch (e) {
+        console.warn("[Speech] Start failed:", e);
+      }
+    }
+  }
+
+  function stopSpeechRecognition() {
+    if (recognition && recognitionActive) {
+      recognition.stop();
+    }
+    if (dialogueTimeout) clearTimeout(dialogueTimeout);
+    activeDialogue = false;
+    updateVisualState("Standing By");
+  }
+
+  function handleSpeechInput(text) {
+    const lower = text.toLowerCase();
+    console.log("[Speech] Transcribed:", text);
+    
+    if (!activeDialogue) {
+      if (lower.includes("anju") || lower.includes("hey anju")) {
+        console.log("[Speech] Wake word triggered!");
+        activeDialogue = true;
+        playWakeSound();
+        
+        let cmd = text.replace(/^(hey\s+)?anju\s*/i, "").trim();
+        if (cmd.length > 2) {
+          processVoiceCommand(cmd);
+        } else {
+          addMsg("Yes, Sathwik? I'm listening...", "anju");
+          playSpeechQueue("Yes, Sathwik? I'm listening.", "neutral");
+          startDialogueTimer();
+        }
+      }
+    } else {
+      processVoiceCommand(text);
+    }
+  }
+
+  function startDialogueTimer() {
+    if (dialogueTimeout) clearTimeout(dialogueTimeout);
+    dialogueTimeout = setTimeout(() => {
+      activeDialogue = false;
+      console.log("[Dialogue] Session expired. Standing by for wake word.");
+      updateVisualState("Standing By");
+    }, 12000);
+  }
+
+  function processVoiceCommand(cmd) {
+    if (dialogueTimeout) clearTimeout(dialogueTimeout);
+    stopSpeaking();
+    
+    addMsg(cmd, 'you');
+    addTypingIndicator();
+    updateVisualState("Processing");
+    updateVoiceStatus(true, 'Processing...');
+    
+    ws.send(JSON.stringify({type: 'chat', text: cmd, source: 'voice'}));
+    
+    startDialogueTimer();
+  }
+
+  function updateVisualState(state) {
+    const val = state.toUpperCase();
+    statusLabel.innerText = val;
+    
+    if (val === 'LISTENING') {
+        core.style.background = "#ff3b3b";
+        core.style.boxShadow = "0 0 40px #ff3b3b";
+        core.style.transform = "scale(1.8)";
+    } else if (val === 'PROCESSING') {
+        core.style.background = "var(--accent)";
+        core.style.boxShadow = "0 0 50px var(--accent)";
+        core.style.transform = "scale(1.2)";
+    } else {
+        core.style.background = "var(--accent)";
+        core.style.boxShadow = "0 0 20px var(--accent)";
+        core.style.transform = "scale(1)";
+    }
+  }
+
+  // 👁️ Visualizer Animations
+  function animateVisualizer(analyser) {
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    
+    function draw() {
+        if (!isSpeaking) return;
+        animationFrameId = requestAnimationFrame(draw);
+        
+        analyser.getByteFrequencyData(dataArray);
+        
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+        }
+        const average = sum / dataArray.length;
+        
+        const scale = 1.0 + (average / 140);
+        core.style.transform = `scale(${scale})`;
+        core.style.boxShadow = `0 0 ${20 + average / 3}px var(--accent)`;
+        
+        const ring = document.querySelector('.visualizer-ring');
+        if (ring) {
+            const intensity = average / 255;
+            ring.style.opacity = `${0.2 + intensity * 0.8}`;
+            ring.style.transform = `scale(${1.0 + intensity * 0.7})`;
+        }
+    }
+    
+    draw();
+  }
+
+  function simulateVisualizer() {
+    if (simulationIntervalId) clearInterval(simulationIntervalId);
+    
+    simulationIntervalId = setInterval(() => {
+        if (!isSpeaking) {
+            clearInterval(simulationIntervalId);
+            resetVisualizer();
+            return;
+        }
+        
+        const mockVolume = 45 + Math.random() * 115;
+        const scale = 1.0 + (mockVolume / 140);
+        
+        core.style.transform = `scale(${scale})`;
+        core.style.boxShadow = `0 0 ${20 + mockVolume / 3}px var(--accent)`;
+        
+        const ring = document.querySelector('.visualizer-ring');
+        if (ring) {
+            ring.style.opacity = `${0.2 + (mockVolume / 220)}`;
+            ring.style.transform = `scale(${1.0 + (mockVolume / 280)})`;
+        }
+    }, 85);
+  }
+
+  function resetVisualizer() {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    if (simulationIntervalId) {
+        clearInterval(simulationIntervalId);
+        simulationIntervalId = null;
+    }
+    core.style.transform = "scale(1)";
+    core.style.boxShadow = "0 0 20px var(--accent)";
+    core.style.background = "var(--accent)";
+    const ring = document.querySelector('.visualizer-ring');
+    if (ring) {
+        ring.style.opacity = "0.2";
+        ring.style.transform = "scale(1)";
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  📎 FILE UPLOAD SYSTEM
+  // ══════════════════════════════════════════════════════════
+
+  function getCategoryColor(category) {
+    const colors = {
+      image: '#00f2ff', pdf: '#ff4b4b', word: '#4b9fff',
+      excel: '#00c964', powerpoint: '#ff9500', text: '#b89aff',
+      unknown: '#888'
+    };
+    return colors[category] || '#888';
+  }
+
+  function formatFileSize(bytes) {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024*1024) return `${(bytes/1024).toFixed(1)}KB`;
+    return `${(bytes/1024/1024).toFixed(1)}MB`;
+  }
+
+  function addFileToSidebar(fileRecord) {
+    // Remove empty state
+    if (filesEmpty) filesEmpty.style.display = 'none';
+
+    const chip = document.createElement('div');
+    chip.className = 'file-chip-sidebar';
+    chip.id = `sidebar-file-${fileRecord.id}`;
+    chip.innerHTML = `
+      <div class="file-chip-icon">${fileRecord.icon}</div>
+      <div class="file-chip-info">
+        <div class="file-chip-name" style="color: ${getCategoryColor(fileRecord.category)}">${fileRecord.filename}</div>
+        <div class="file-chip-meta">${fileRecord.category} · ${formatFileSize(fileRecord.file_size)}</div>
+      </div>
+    `;
+    chip.onclick = () => activateFileContext(fileRecord);
+    filesList.appendChild(chip);
+  }
+
+  function activateFileContext(fileRecord) {
+    activeFileContext = fileRecord;
+    fileContextBar.classList.add('visible');
+    fileContextLabel.textContent = `${fileRecord.icon} ${fileRecord.filename} — Active context`;
+    uploadBtn.classList.add('active');
+  }
+
+  function clearFileContext() {
+    activeFileContext = null;
+    fileContextBar.classList.remove('visible');
+    uploadBtn.classList.remove('active');
+  }
+
+  clearFileBtn.onclick = clearFileContext;
+
+  // Show scanning message in chat
+  function addFileScanningMsg(filename, icon, category, fileSize) {
+    if (chat.querySelector('h1')) chat.innerHTML = '';
+    
+    const color = getCategoryColor(category);
+    const msgEl = document.createElement('div');
+    msgEl.className = 'file-msg-bubble';
+    msgEl.style.maxWidth = '70%';
+    msgEl.style.alignSelf = 'flex-end';
+    msgEl.innerHTML = `
+      <div class="file-msg-icon scan-overlay">${icon}</div>
+      <div class="file-msg-info">
+        <div class="file-msg-name" style="color:${color}">${filename}</div>
+        <div class="file-msg-meta">${category} · ${formatFileSize(fileSize)}</div>
+        <div class="file-msg-scanning" id="scan-status-${filename.replace(/[^a-z0-9]/gi,'_')}">
+          <div class="scan-dot"></div>
+          <span>Scanning & extracting content...</span>
+        </div>
+      </div>
+    `;
+    chat.appendChild(msgEl);
+    chat.scrollTop = chat.scrollHeight;
+    currentScanMsgEl = msgEl;
+    return msgEl;
+  }
+
+  function updateScanStatus(filename, success) {
+    const safeId = filename.replace(/[^a-z0-9]/gi,'_');
+    const scanStatus = document.getElementById(`scan-status-${safeId}`);
+    if (scanStatus) {
+      if (success) {
+        scanStatus.innerHTML = `<span style="color: var(--accent-green)">✓ Scan complete — Anju is reading the content</span>`;
+      } else {
+        scanStatus.innerHTML = `<span style="color: #ff4b4b">✗ Scan failed</span>`;
+      }
+    }
+  }
+
+  // Main upload function
+  function uploadFile(file) {
+    if (!file) return;
+    
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      alert(`File too large. Maximum size is 50MB. Your file: ${formatFileSize(file.size)}`);
+      return;
+    }
+
+    // Determine icon
+    const ext = file.name.split('.').pop().toLowerCase();
+    const iconMap = {
+      png:'🖼️', jpg:'🖼️', jpeg:'🖼️', webp:'🖼️', gif:'🖼️', bmp:'🖼️',
+      pdf:'📄',
+      docx:'📝', doc:'📝',
+      xlsx:'📊', xls:'📊',
+      pptx:'📑', ppt:'📑',
+      txt:'📃', md:'📃', py:'📃', js:'📃', ts:'📃', html:'📃',
+      css:'📃', csv:'📃', json:'📃', yaml:'📃', yml:'📃',
+      xml:'📃', sh:'📃', bat:'📃'
+    };
+    const icon = iconMap[ext] || '📎';
+
+    const catMap = {
+      png:'image', jpg:'image', jpeg:'image', webp:'image', gif:'image', bmp:'image',
+      pdf:'pdf',
+      docx:'word', doc:'word',
+      xlsx:'excel', xls:'excel',
+      pptx:'powerpoint', ppt:'powerpoint'
+    };
+    const category = catMap[ext] || 'text';
+
+    // Play upload sound
+    playUploadSound();
+
+    // Show scanning message in chat
+    addFileScanningMsg(file.name, icon, category, file.size);
+
+    // Show progress bar
+    uploadProgress.classList.add('active');
+
+    // Build form data
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // POST to /upload
+    fetch('/upload', {
+      method: 'POST',
+      body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+      uploadProgress.classList.remove('active');
+      if (data.success) {
+        console.log('[Upload] File uploaded successfully:', data.filename);
+      } else {
+        updateScanStatus(file.name, false);
+        console.error('[Upload] Upload failed:', data.error);
+      }
+    })
+    .catch(err => {
+      uploadProgress.classList.remove('active');
+      updateScanStatus(file.name, false);
+      console.error('[Upload] Network error:', err);
+    });
+  }
+
+  // Paperclip button click
+  uploadBtn.onclick = () => {
+    fileInput.click();
+  };
+
+  // File input change
+  fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (file) uploadFile(file);
+    fileInput.value = '';
+  };
+
+  // ── Drag and Drop ──
+  let dragCounter = 0;
+
+  document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    dragCounter++;
+    if (dragCounter === 1) {
+      dropOverlay.classList.add('active');
+    }
+  });
+
+  document.addEventListener('dragleave', (e) => {
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      dropOverlay.classList.remove('active');
+      dropZone.classList.remove('drag-over');
+    }
+  });
+
+  document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  });
+
+  dropZone.addEventListener('dragenter', (e) => {
+    dropZone.classList.add('drag-over');
+  });
+
+  dropZone.addEventListener('dragleave', (e) => {
+    dropZone.classList.remove('drag-over');
+  });
+
+  document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    dropOverlay.classList.remove('active');
+    dropZone.classList.remove('drag-over');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      uploadFile(files[0]);
+    }
+  });
+
+  // Click drop overlay to dismiss
+  dropOverlay.addEventListener('click', (e) => {
+    if (e.target === dropOverlay) {
+      dropOverlay.classList.remove('active');
+      dragCounter = 0;
+    }
+  });
+
+  // Handle WebSocket file_scanned messages
+  function handleFileScanned(data) {
+    playScanCompleteSound();
+    updateScanStatus(data.filename, data.success);
+
+    const fileRecord = {
+      id: Date.now(),
+      filename: data.filename,
+      category: data.category || 'unknown',
+      icon: data.icon || '📎',
+      file_size: data.file_size,
+      preview: data.preview,
+      filepath_url: data.filepath_url,
+      pages: data.pages,
+      slides: data.slides,
+      sheets: data.sheets,
+      lines: data.lines,
+    };
+    
+    uploadedFiles.push(fileRecord);
+    addFileToSidebar(fileRecord);
+    activateFileContext(fileRecord);
+
+    // If it's an image and we have a URL, append image to the scan bubble
+    if (data.filepath_url && data.category === 'image' && currentScanMsgEl) {
+      const imgEl = document.createElement('img');
+      imgEl.src = '/' + data.filepath_url;
+      imgEl.style.cssText = 'max-width:100%; border-radius:12px; margin-top:10px; display:block; max-height:240px; object-fit:contain;';
+      imgEl.onclick = () => window.open(imgEl.src);
+      currentScanMsgEl.querySelector('.file-msg-info').appendChild(imgEl);
+    }
+    
+    // Reset scanning message element reference
+    currentScanMsgEl = null;
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  🔊 Audio Init Handler
+  // ══════════════════════════════════════════════════════════
+  document.getElementById('init-overlay').onclick = function() {
+    this.style.display = 'none';
+    getAudioContext();
+    playStartupSound();
+    
+    if (window.speechSynthesis) window.speechSynthesis.getVoices();
+    
+    setTimeout(() => {
+        playSpeechQueue("System synchronized. Ready for your command, Sathwik.", "neutral");
+        if (speakToggle.checked) {
+          startSpeechRecognition();
+        }
+    }, 1600);
+  };
+
+  if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = () => {
+      console.log("[Voices] Synthesis voices populated:", window.speechSynthesis.getVoices().length);
+    };
+  }
+
+  if (localStorage.getItem('speakResponses') === null) {
+      localStorage.setItem('speakResponses', 'true');
+      speakToggle.checked = true;
+  } else {
+      speakToggle.checked = localStorage.getItem('speakResponses') === 'true';
+  }
+  
+  speakToggle.onchange = () => {
+    localStorage.setItem('speakResponses', speakToggle.checked);
+    if (speakToggle.checked) {
+      updateVoiceStatus(true, 'Voice engine active');
+      startSpeechRecognition();
+      playStartupSound();
+    } else {
+      updateVoiceStatus(false, 'Voice engine off');
+      stopSpeechRecognition();
+      stopSpeaking();
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════
+  //  🌐 WebSocket Connection
+  // ══════════════════════════════════════════════════════════
+  function connect() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+    ws.onopen = () => {
+      statusLabel.innerText = "ONLINE";
+      statusDot.style.background = "var(--accent)";
+      if (speakToggle.checked) {
+        startSpeechRecognition();
+      }
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.type === 'status') {
+        const val = data.value.toUpperCase();
+        statusLabel.innerText = val;
+        
+        if (val === 'LISTENING') {
+            stopSpeaking();
+            playListeningSound();
+            updateVisualState('LISTENING');
+        } else if (val === 'PROCESSING') {
+            playProcessingSound();
+            updateVisualState('PROCESSING');
+        } else {
+            updateVisualState('STANDBY');
+        }
+      } else if (data.type === 'message') {
+        if (chat.querySelector('h1')) chat.innerHTML = '';
+        
+        if (data.sender === 'You' && !data.is_history) return;
+
+        addMsg(data.text, data.sender === 'You' ? 'you' : 'anju', data.image);
+        
+        // CLEAN VOICE PIPELINE: Only play if audio is included with the message
+        // Server generates TTS synchronously before sending — no race conditions
+        if ((speakToggle.checked || data.speak) && data.sender !== 'You' && !data.is_history) {
+            if (data.audio) {
+                console.log("[TTS] Playing neural voice (synced with message)");
+                playNeuralAudio(data.audio, data.text, data.emotion);
+            }
+            // No audio = no voice. Clean and simple. No browser speech fallback.
+        }
+      } else if (data.type === 'audio') {
+        // Legacy async audio handler — most messages include audio inline now
+        if ((speakToggle.checked || data.speak) && data.audio) {
+            console.log("[TTS] Neural audio payload received");
+            playNeuralAudio(data.audio, data.text, data.emotion);
+        }
+      } else if (data.type === 'file_scanned') {
+        // Handle file scan completion from backend
+        handleFileScanned(data);
+      }
+    };
+
+    ws.onclose = () => {
+      statusLabel.innerText = "OFFLINE";
+      statusDot.style.background = "red";
+      setTimeout(connect, 3000);
+    };
+  }
+
+  function formatStr(text) {
+    if (!text) return "";
+    text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    text = text.replace(/```([\s\S]*?)```/g, '<pre style="background:#000; padding:15px; margin:10px 0; border-radius:10px; font-family:monospace; font-size:13px; overflow-x:auto;"><code>$1</code></pre>');
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/`(.*?)`/g, '<code style="background:#222; padding:2px 5px; border-radius:4px;">$1</code>');
+    text = text.replace(/^- (.*)$/gm, '<li>$1</li>');
+    if (text.includes('<li>')) text = text.replace(/(<li>.*?<\/li>)/gs, '<ul>$1</ul>');
+    return text.replace(/\n/g, '<br>');
+  }
+
+  // ⏰ Get current time string for timestamps
+  function getTimeStr() {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ⌨️ Typing Indicator
+  function addTypingIndicator() {
+    removeTypingIndicator();
+    const div = document.createElement('div');
+    div.className = 'typing-indicator';
+    div.id = 'typing-indicator';
+    div.innerHTML = `
+      <div class="avatar" style="width:32px;height:32px;font-size:8px;">ANJU</div>
+      <div class="typing-dots">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    `;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function removeTypingIndicator() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+  }
+
+  // 📜 Auto-scroll & scroll-to-bottom button
+  function scrollToBottom(smooth = false) {
+    chat.scrollTo({
+      top: chat.scrollHeight,
+      behavior: smooth ? 'smooth' : 'instant'
+    });
+  }
+
+  function checkScrollPosition() {
+    const threshold = 200;
+    const atBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < threshold;
+    const btn = document.getElementById('scroll-bottom-btn');
+    if (btn) {
+      btn.classList.toggle('visible', !atBottom);
+    }
+  }
+
+  chat.addEventListener('scroll', checkScrollPosition);
+
+  function addMsg(text, who, image) {
+    removeTypingIndicator();
+    
+    const div = document.createElement('div');
+    div.className = `msg ${who == 'you' ? 'you' : ''}`;
+    const timestamp = getTimeStr();
+    let content = `<div class="bubble">${formatStr(text)}`;
+    if (image) content += `<br><img src="/${image}" style="max-width:100%; border-radius:15px; margin-top:20px;" onclick="window.open(this.src)">`;
+    content += `<div class="msg-timestamp">${timestamp}</div></div>`;
+    div.innerHTML = `${who !== 'you' ? '<div class="avatar">ANJU</div>' : '<div class="avatar" style="color:white; border-color:white;">YOU</div>'}${content}`;
+    chat.appendChild(div);
+    scrollToBottom();
+  }
+
+  function send() {
+    const val = input.value.trim();
+    if (!val || !ws || ws.readyState !== WebSocket.OPEN) return;
+    stopSpeaking();
+    addMsg(val, 'you');
+    addTypingIndicator();
+    ws.send(JSON.stringify({type: 'chat', text: val}));
+    input.value = '';
+    input.style.height = 'auto';
+  }
+
+  document.getElementById('scroll-bottom-btn').onclick = () => scrollToBottom(true);
+
+  // Keyboard/input hooks
+  input.addEventListener('keydown', (e) => { 
+    stopSpeaking();
+    if (e.key === 'Enter' && !e.shiftKey) { 
+        e.preventDefault(); 
+        send(); 
+    } 
+  });
+  
+  input.addEventListener('input', () => { 
+    stopSpeaking();
+    input.style.height = 'auto'; 
+    input.style.height = (input.scrollHeight) + 'px'; 
+  });
+  
+  document.getElementById('send-btn').onclick = send;
+
+  connect();
+</script>
+</body>
+</html>

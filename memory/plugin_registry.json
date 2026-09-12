@@ -1,0 +1,168 @@
+{
+  "Web Search": {
+    "name": "Web Search",
+    "module": "tools.web_search",
+    "version": "1.0.0",
+    "description": "Search the web for real-time information",
+    "author": "",
+    "actions": [
+      "web_search"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  },
+  "Image Generator": {
+    "name": "Image Generator",
+    "module": "tools.image_generator",
+    "version": "1.0.0",
+    "description": "Generate images from text prompts",
+    "author": "",
+    "actions": [
+      "generate_image"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  },
+  "PDF Generator": {
+    "name": "PDF Generator",
+    "module": "tools.pdf_generator",
+    "version": "1.0.0",
+    "description": "Generate PDF documents",
+    "author": "",
+    "actions": [
+      "generate_pdf"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  },
+  "Code Execution": {
+    "name": "Code Execution",
+    "module": "tools.code_execution",
+    "version": "1.0.0",
+    "description": "Execute Python code and terminal commands",
+    "author": "",
+    "actions": [
+      "execute_code"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  },
+  "File Operations": {
+    "name": "File Operations",
+    "module": "tools.file_ops",
+    "version": "1.0.0",
+    "description": "Read, write, and manage files on the system",
+    "author": "",
+    "actions": [
+      "read_file",
+      "write_file",
+      "list_directory"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  },
+  "Camera": {
+    "name": "Camera",
+    "module": "tools.camera",
+    "version": "1.0.0",
+    "description": "Capture webcam photos",
+    "author": "",
+    "actions": [
+      "take_picture"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  },
+  "Vision Analyzer": {
+    "name": "Vision Analyzer",
+    "module": "tools.vision_analyzer",
+    "version": "1.0.0",
+    "description": "Analyze images with AI vision",
+    "author": "",
+    "actions": [
+      "analyze_vision"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  },
+  "Cyber Tools": {
+    "name": "Cyber Tools",
+    "module": "tools.cyber_tools",
+    "version": "1.0.0",
+    "description": "Security scanning and URL verification",
+    "author": "",
+    "actions": [
+      "port_scan",
+      "url_check"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  },
+  "Phone Control": {
+    "name": "Phone Control",
+    "module": "tools.phone_control",
+    "version": "1.0.0",
+    "description": "Control Android phone via ADB",
+    "author": "",
+    "actions": [
+      "connect_phone",
+      "open_app",
+      "send_sms",
+      "take_photo",
+      "take_screenshot",
+      "get_battery",
+      "get_notifications",
+      "send_keyevent",
+      "set_volume"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  },
+  "App Control": {
+    "name": "App Control",
+    "module": "automation.app_control",
+    "version": "1.0.0",
+    "description": "Launch applications on the computer",
+    "author": "",
+    "actions": [
+      "open_app"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  },
+  "Memory System": {
+    "name": "Memory System",
+    "module": "memory.memory",
+    "version": "1.0.0",
+    "description": "Store and retrieve information in long-term memory",
+    "author": "",
+    "actions": [
+      "remember",
+      "get_memory"
+    ],
+    "dependencies": [],
+    "enabled": true,
+    "loaded_at": "2026-07-28T21:35:56.589674",
+    "health": "unknown"
+  }
+}

@@ -1,0 +1,38 @@
+# ── Secrets ───────────────────────────────────────────────────────────────────
+.env
+
+# ── Python bytecode ───────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+venv/
+venv_312/
+
+# ── Generated output ───────────────────────────────────────────────────────────
+output/
+
+# ── Uploaded & user files ──────────────────────────────────────────────────────
+uploads/
+!uploads/modified/
+
+# ── Database & runtime state ───────────────────────────────────────────────────
+memory/anju_memory.db
+memory/memories.json
+memory/workflows.json
+memory/security_profile.json
+memory/phone_config.json
+
+# ── Build / dist ───────────────────────────────────────────────────────────────
+*.egg-info/
+dist/
+build/
+
+# ── OS junk ───────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Windows reserved device name (appears as a file, cannot be deleted) ───────
+nul
