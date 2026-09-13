@@ -7,3 +7,5 @@ flask-cors==6.0.2
 requests==2.32.5
 python-dotenv==1.0.1
 edge-tts==7.2.8
+# PostgreSQL driver for the connected Neon database; SQLite remains the local fallback.
+psycopg[binary]==3.2.9
