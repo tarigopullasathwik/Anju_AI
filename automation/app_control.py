@@ -1,7 +1,10 @@
 import os
 import subprocess
 import webbrowser
-import winreg
+try:
+    import winreg
+except ImportError:
+    winreg = None
 import glob
 
 def _try_launch(path: str, label: str) -> str | None:
@@ -23,6 +26,8 @@ def _registry_search(app_key: str) -> str | None:
     Search Windows Registry App Paths for installed applications.
     Covers Spotify, Discord, VLC, Steam, Chrome, etc.
     """
+    if winreg is None:
+        return None
     reg_paths = [
         r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths",
         r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths",
@@ -60,6 +65,8 @@ def _uninstall_registry_search(app_key: str) -> str | None:
     Search Uninstall registry keys to find InstallLocation for broader app detection.
     Catches things like Telegram, WhatsApp, Notion, etc.
     """
+    if winreg is None:
+        return None
     reg_paths = [
         r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
         r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
