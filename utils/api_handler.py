@@ -129,53 +129,56 @@ class APIHandler:
 
     # ── Intelligent Caching System ──────────────────────────────────────────────
     @staticmethod
-    def get_cache(prompt: str, ttl_hours: int = 24) -> str:
-        """Retrieves a cached response if it has not expired."""
+    def get_cache(prompt: str, ttl_hours: int = 24) -> str | None:
+        """Read only a valid, non-expired cached assistant response."""
+        prompt_hash = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+        conn = None
         try:
-            prompt_hash = hashlib.md5(prompt.encode('utf-8')).hexdigest()
+            os.makedirs(DB_DIR, exist_ok=True)
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
-
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS api_cache (
-                    hash TEXT PRIMARY KEY,
-                    prompt TEXT,
-                    response TEXT,
-                    timestamp TEXT
-                )
-            ''')
-
-            cursor.execute("SELECT response, timestamp FROM api_cache WHERE hash = ?", (prompt_hash,))
-            row = cursor.fetchone()
-            conn.close()
-
-            if row:
-                cached_res, timestamp = row
-                cached_time = datetime.fromisoformat(timestamp)
-                if datetime.now() - cached_time < timedelta(hours=ttl_hours):
-                    APIHandler.update_metric('cache_hits')
-                    print(f"[APIHandler] Cache Hit for hash: {prompt_hash[:8]}")
-                    return cached_res
+            cursor.execute('''CREATE TABLE IF NOT EXISTS api_cache (
+                hash TEXT PRIMARY KEY, prompt TEXT NOT NULL, response TEXT NOT NULL, timestamp TEXT NOT NULL
+            )''')
+            row = cursor.execute("SELECT response, timestamp FROM api_cache WHERE hash = ?", (prompt_hash,)).fetchone()
+            if not row:
+                return None
+            response, timestamp = row
+            cached_time = datetime.fromisoformat(timestamp)
+            if not isinstance(response, str) or not response.strip() or datetime.now() - cached_time >= timedelta(hours=max(1, ttl_hours)):
+                cursor.execute("DELETE FROM api_cache WHERE hash = ?", (prompt_hash,))
+                conn.commit()
+                return None
+            APIHandler.update_metric('cache_hits')
+            return response
+        except (ValueError, TypeError, sqlite3.Error) as exc:
+            print(f"[APIHandler] Cache read skipped: {exc}")
             return None
-        except Exception as e:
-            print(f"[APIHandler] Cache Read Error: {e}")
-            return None
+        finally:
+            if conn:
+                conn.close()
 
     @staticmethod
     def set_cache(prompt: str, response: str):
-        """Stores a prompt-response translation in local cache."""
+        """Store only non-empty assistant output in the local cache."""
+        if not isinstance(prompt, str) or not prompt.strip() or not isinstance(response, str) or not response.strip():
+            return
+        conn = None
         try:
-            prompt_hash = hashlib.md5(prompt.encode('utf-8')).hexdigest()
+            os.makedirs(DB_DIR, exist_ok=True)
+            prompt_hash = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
-            cursor.execute(
-                "INSERT OR REPLACE INTO api_cache (hash, prompt, response, timestamp) VALUES (?, ?, ?, ?)",
-                (prompt_hash, prompt, response, datetime.now().isoformat())
-            )
+            cursor.execute('''CREATE TABLE IF NOT EXISTS api_cache (
+                hash TEXT PRIMARY KEY, prompt TEXT NOT NULL, response TEXT NOT NULL, timestamp TEXT NOT NULL
+            )''')
+            cursor.execute("INSERT OR REPLACE INTO api_cache VALUES (?, ?, ?, ?)", (prompt_hash, prompt, response.strip(), datetime.now().isoformat()))
             conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"[APIHandler] Cache Write Error: {e}")
+        except sqlite3.Error as exc:
+            print(f"[APIHandler] Cache write skipped: {exc}")
+        finally:
+            if conn:
+                conn.close()
 
     # ── Multi-Model Registry ────────────────────────────────────────────────────
     MODEL_REGISTRY = {

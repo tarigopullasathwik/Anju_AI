@@ -482,6 +482,25 @@
     .cat-powerpoint { --cat-color: #ff9500; }
     .cat-text   { --cat-color: #b89aff; }
 
+    /* ── Bottom-left companion ── */
+    .companion-pet { position: fixed; left: 18px; bottom: 18px; z-index: 7000; display: flex; align-items: flex-end; gap: 10px; pointer-events: none; }
+    .companion-card { pointer-events: auto; width: 148px; padding: 10px; border: 1px solid rgba(0,242,255,.2); border-radius: 16px; background: rgba(10,10,10,.88); box-shadow: 0 10px 30px rgba(0,0,0,.35); backdrop-filter: blur(14px); }
+    .companion-label { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:9px; letter-spacing:1px; margin-bottom:7px; }
+    .companion-toggle { color:var(--accent); background:transparent; border:1px solid rgba(0,242,255,.25); border-radius:8px; padding:4px 7px; font-size:9px; cursor:pointer; }
+    .companion-toggle[aria-pressed="true"] { background:rgba(0,242,255,.12); }
+    .pet { width:68px; height:76px; position:relative; transform-origin:bottom center; }
+    .pet-body { position:absolute; left:12px; bottom:0; width:44px; height:48px; border:2px solid var(--accent); border-radius:22px 22px 16px 16px; background:#101b20; box-shadow:0 0 18px rgba(0,242,255,.16); }
+    .pet-ear { position:absolute; top:7px; width:16px; height:19px; border:2px solid var(--accent); background:#101b20; }
+    .pet-ear.left { left:10px; transform:rotate(-25deg); border-radius:10px 3px 3px 3px; } .pet-ear.right { right:10px; transform:rotate(25deg); border-radius:3px 10px 3px 3px; }
+    .pet-eye { position:absolute; top:22px; width:5px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); } .pet-eye.left { left:24px; } .pet-eye.right { right:24px; }
+    .pet-mouth { position:absolute; left:29px; top:34px; width:10px; height:4px; border-bottom:2px solid var(--accent-green); border-radius:0 0 10px 10px; transform-origin:center; }
+    .pet-status { font-size:9px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .companion-pet.is-speaking .pet { animation:petTalk .28s ease-in-out infinite alternate; } .companion-pet.is-speaking .pet-mouth { height:10px; }
+    .companion-pet.is-listening .pet { animation:petListen 1s ease-in-out infinite; } .companion-pet.is-error .pet-body { border-color:#ff6b6b; }
+    @keyframes petTalk { from { transform:translateY(0) scale(1); } to { transform:translateY(-2px) scale(1.03); } } @keyframes petListen { 50% { transform:rotate(-3deg); } }
+    @media (max-width:640px) { .companion-pet { left:10px; bottom:10px; } .companion-card { width:132px; } .pet { transform:scale(.85); transform-origin:bottom left; } }
+    @media (prefers-reduced-motion:reduce) { .companion-pet *, .companion-pet { animation:none !important; transition:none !important; } }
+
     /* ── Scanning animation overlay on image previews ── */
     .scan-overlay {
       position: relative;
@@ -733,6 +752,11 @@
     </div>
   </div>
 
+  <div class="companion-pet" id="companion-pet" aria-live="polite">
+    <div class="pet" aria-hidden="true"><div class="pet-ear left"></div><div class="pet-ear right"></div><div class="pet-body"><i class="pet-eye left"></i><i class="pet-eye right"></i><i class="pet-mouth"></i></div></div>
+    <div class="companion-card"><div class="companion-label"><span>COMPANION</span><button class="companion-toggle" id="companion-toggle" type="button" aria-pressed="false">OFF</button></div><div class="pet-status" id="companion-status">Voice sync standby</div></div>
+  </div>
+
   <!-- ── INIT OVERLAY ── -->
   <div id="init-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer;">
     <h1 style="font-family: 'Syncopate', sans-serif; color:var(--accent); margin-bottom:20px;">ANJU AI</h1>
@@ -757,6 +781,25 @@
   const chat = document.getElementById('chat');
   const input = document.getElementById('user-input');
   const speakToggle = document.getElementById('speak-toggle');
+  const companion = document.getElementById('companion-pet');
+  const companionToggle = document.getElementById('companion-toggle');
+  const companionStatus = document.getElementById('companion-status');
+  let companionEnabled = localStorage.getItem('anju-companion') === 'on';
+  companionToggle.setAttribute('aria-pressed', String(companionEnabled));
+  companionToggle.textContent = companionEnabled ? 'ON' : 'OFF';
+  function setCompanionState(state, label) {
+    if (!companion) return;
+    companion.classList.remove('is-speaking', 'is-listening', 'is-error');
+    if (state !== 'idle') companion.classList.add('is-' + state);
+    if (companionStatus) companionStatus.textContent = label || state;
+  }
+  companionToggle.addEventListener('click', () => {
+    companionEnabled = !companionEnabled;
+    localStorage.setItem('anju-companion', companionEnabled ? 'on' : 'off');
+    companionToggle.setAttribute('aria-pressed', String(companionEnabled));
+    companionToggle.textContent = companionEnabled ? 'ON' : 'OFF';
+    setCompanionState('idle', companionEnabled ? 'Voice sync ready' : 'Voice sync off');
+  });
   const statusDot = document.getElementById('status-dot');
   const statusLabel = document.getElementById('status-label');
   const core = document.querySelector('.visualizer-core');
@@ -1021,12 +1064,7 @@
     isSpeaking = false;
     speechQueue = [];
     currentUtteranceIndex = 0;
-    if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        // Chrome bug workaround: mark as potentially stalled
-        speechSynthesisStalled = true;
-        setTimeout(ensureSpeechSynthesis, 100);
-    }
+    // Server-generated neural MP3 is the only output path. Never invoke speechSynthesis.
     if (currentAudio) {
         try {
             currentAudio.pause();
@@ -1041,12 +1079,15 @@
   // 🔊 Audio Playback (Neural Premium) — Full Warmth, No Filter
   function playNeuralAudio(base64Data, originalText, emotion) {
     stopSpeaking();
+    if (!speakToggle.checked || !base64Data || typeof base64Data !== 'string') return;
     isSpeaking = true;
     lastText = originalText;
     lastEmotion = emotion;
     updateVoiceStatus(true, 'Speaking (Neural)');
+    setCompanionState('speaking', 'Speaking in sync');
 
     try {
+        if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64Data) || base64Data.length < 128) throw new Error('Invalid audio payload');
         const binary = atob(base64Data);
         const array = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) {
@@ -1090,6 +1131,7 @@
             isSpeaking = false;
             resetVisualizer();
             updateVoiceStatus(false, 'Voice unavailable');
+            setCompanionState('error', 'Audio playback blocked');
         });
         
         audio.onended = () => {
@@ -1097,6 +1139,7 @@
             currentAudio = null;
             URL.revokeObjectURL(url);
             resetVisualizer();
+            setCompanionState('idle', 'Voice sync ready');
             updateVoiceStatus(false, 'Voice idle');
         };
         
@@ -1106,9 +1149,10 @@
             currentAudio = null;
             URL.revokeObjectURL(url);
             resetVisualizer();
+            setCompanionState('error', 'Voice stream unavailable');
             updateVoiceStatus(false, 'Voice unavailable');
         };
-    } catch (e) {
+        } catch (e) {
         console.error("[TTS] Base64 audio parsing failed (no fallback):", e);
         isSpeaking = false;
         resetVisualizer();
@@ -1155,6 +1199,9 @@
 
   // 🎙️ Premium Speech Queue
   function playSpeechQueue(text, emotion) {
+    // Kept as a compatibility shim for older message payloads; browser speech is disabled.
+    return;
+    /*
     stopSpeaking();
     isSpeaking = true;
     lastText = text;
@@ -1303,6 +1350,9 @@
     };
     
     window.speechSynthesis.speak(utterance);
+  }
+
+    */
   }
 
   // 🎙️ Browser Speech Recognition
@@ -1792,9 +1842,9 @@
     getAudioContext();
     playStartupSound();
     
-    if (window.speechSynthesis) window.speechSynthesis.getVoices();
-    
-    setTimeout(() => {
+  setCompanionState('idle', companionEnabled ? 'Voice sync ready' : 'Voice sync off');
+  setTimeout(() => {
+
         playSpeechQueue("System synchronized. Ready for your command, Sathwik.", "neutral");
         if (speakToggle.checked) {
           startSpeechRecognition();
