@@ -7,7 +7,13 @@ from datetime import datetime, timezone
 from typing import Any
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "anju_memory.db")
-DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
+def _database_url() -> str | None:
+    # Read at call time so Vercel-injected variables are available after import.
+    return (os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or
+            os.getenv("POSTGRES_PRISMA_URL") or os.getenv("POSTGRES_URL_NON_POOLING"))
+
+
+DATABASE_URL = _database_url()
 
 
 def _postgres():

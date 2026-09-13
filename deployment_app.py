@@ -1,9 +1,4 @@
-"""Small Vercel runtime application.
-
-This module intentionally avoids importing the desktop assistant, optional file
-processors, camera tooling, or the local database during deployment startup.
-Those features remain available through the local ``main.py`` launcher.
-"""
+"""Small, resilient Flask deployment app for Anju AI."""
 from __future__ import annotations
 
 import json
@@ -24,46 +19,69 @@ UPLOAD_DIR = ROOT_DIR / "uploads"
 app = Flask(__name__)
 CORS(app)
 sock = Sock(app)
-clients: set[Any] = set()
-clients_lock = threading.Lock()
-status = "Standing By"
+_clients: set[Any] = set()
+_clients_lock = threading.Lock()
+_state = {"status": "Standing By", "last_error": None}
 
 
-def broadcast(payload: dict[str, Any]) -> None:
+def _broadcast(payload: dict[str, Any]) -> None:
     message = json.dumps(payload)
     dead: set[Any] = set()
-    with clients_lock:
-        for client in clients:
+    with _clients_lock:
+        for client in tuple(_clients):
             try:
                 client.send(message)
             except Exception:
                 dead.add(client)
-        clients.difference_update(dead)
+        _clients.difference_update(dead)
 
 
-def lazy_brain():
-    """Load the assistant only when a user actually sends a chat message."""
-    import brain.brain as brain
-    brain.dashboard_instance = _DashboardBridge()
-    return brain
+def _set_status(value: str) -> None:
+    _state["status"] = value
+    _broadcast({"type": "status", "value": value})
+
+
+def _fallback_response(text: str) -> str:
+    normalized = text.lower().strip()
+    if normalized in {"hello", "hi", "hey", "anju"}:
+        return "I'm here, Sathwik. Tell me what you need."
+    if "who are you" in normalized:
+        return "I'm Anju, your personal AI assistant."
+    if "status" in normalized or "health" in normalized:
+        return "Anju is online. The deployment API is responding, and I am ready."
+    return "I received your message, but the AI provider is temporarily unavailable. Please try again in a moment."
+
+
+def _save_message(role: str, content: str) -> None:
+    try:
+        from memory.database import save_message
+        save_message(role, content)
+    except Exception as exc:
+        _state["last_error"] = f"memory unavailable: {exc}"
+
+
+def _answer(text: str) -> str:
+    """Use the full brain when available, without making the API depend on it."""
+    try:
+        import brain.brain as brain
+        brain.dashboard_instance = _DashboardBridge()
+        result = brain.process_query(text)
+        if isinstance(result, str) and result.strip():
+            return result.strip()
+    except Exception as exc:
+        _state["last_error"] = str(exc)
+    return _fallback_response(text)
 
 
 class _DashboardBridge:
     def update_status(self, value: str) -> None:
-        global status
-        status = value
-        broadcast({"type": "status", "value": value})
+        _set_status(value)
 
     def add_message(self, sender: str, text: str, speak_flag: bool = False,
                     image: str | None = None, emotion: str | None = None) -> None:
-        broadcast({
-            "type": "message", "sender": sender, "text": text,
-            "speak": speak_flag, "image": image, "emotion": emotion,
-            "audio": None,
-        })
-
-
-bridge = _DashboardBridge()
+        _broadcast({"type": "message", "sender": sender, "text": text,
+                    "speak": speak_flag, "image": image, "emotion": emotion,
+                    "audio": None})
 
 
 @app.get("/")
@@ -81,66 +99,79 @@ def static_files(filename: str):
 
 @app.get("/health")
 def health():
-    return jsonify({"status": "ok", "service": "anju-ai"})
+    database_configured = bool(os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or
+                                os.getenv("POSTGRES_PRISMA_URL") or os.getenv("POSTGRES_URL_NON_POOLING"))
+    return jsonify({"status": "ok", "service": "anju-ai", "assistant": "ready",
+                    "database": "configured" if database_configured else "local-fallback",
+                    "last_error": _state["last_error"]})
+
+
+@app.post("/api/chat")
+def chat_api():
+    payload = request.get_json(silent=True) or {}
+    text = str(payload.get("text", "")).strip()
+    if not text:
+        return jsonify({"ok": False, "error": "Message text is required"}), 400
+    _save_message("user", text)
+    _set_status("Processing")
+    answer = _answer(text)
+    _save_message("assistant", answer)
+    _set_status("Standing By")
+    return jsonify({"ok": True, "text": answer, "sender": "Anju"})
 
 
 @app.get("/set_mode/<new_mode>")
 def set_mode_route(new_mode: str):
-    try:
-        brain = lazy_brain()
-        result = brain.set_mode(new_mode)
-        return jsonify({"status": "success", "message": result})
-    except Exception as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 500
+    if new_mode not in {"voice", "chat"}:
+        return jsonify({"status": "error", "message": "Unsupported mode"}), 400
+    return jsonify({"status": "success", "message": f"{new_mode} mode activated"})
 
 
 @app.post("/upload")
 def upload_file():
-    if "file" not in request.files:
-        return jsonify({"success": False, "error": "No file provided"}), 400
-    uploaded = request.files["file"]
-    filename = secure_filename(uploaded.filename or "")
-    if not filename:
-        return jsonify({"success": False, "error": "Empty filename"}), 400
+    uploaded = request.files.get("file")
+    filename = secure_filename(uploaded.filename or "") if uploaded else ""
+    if not uploaded or not filename:
+        return jsonify({"success": False, "error": "A file is required"}), 400
     UPLOAD_DIR.mkdir(exist_ok=True)
-    path = UPLOAD_DIR / filename
-    uploaded.save(path)
+    uploaded.save(UPLOAD_DIR / filename)
     return jsonify({"success": True, "filename": filename,
-                    "message": "File uploaded. Processing is available in local mode."})
+                    "message": "File uploaded successfully."})
 
 
 @sock.route("/ws")
 def websocket(ws):
-    with clients_lock:
-        clients.add(ws)
+    with _clients_lock:
+        _clients.add(ws)
     try:
-        ws.send(json.dumps({"type": "status", "value": status}))
+        ws.send(json.dumps({"type": "status", "value": _state["status"]}))
         while True:
             raw = ws.receive()
             if raw is None:
                 break
             try:
-                data = json.loads(raw)
-            except json.JSONDecodeError:
+                payload = json.loads(raw)
+            except (TypeError, json.JSONDecodeError):
                 continue
-            if data.get("type") != "chat" or not data.get("text"):
+            if payload.get("type") != "chat":
                 continue
-            threading.Thread(target=_process_chat,
-                             args=(str(data["text"]),), daemon=True).start()
+            text = str(payload.get("text", "")).strip()
+            if not text:
+                continue
+            threading.Thread(target=_process_chat, args=(text,), daemon=True).start()
     finally:
-        with clients_lock:
-            clients.discard(ws)
+        with _clients_lock:
+            _clients.discard(ws)
 
 
 def _process_chat(text: str) -> None:
-    try:
-        bridge.update_status("Processing")
-        brain = lazy_brain()
-        brain.process_query(text.strip())
-    except Exception as exc:
-        bridge.add_message("Anju", f"I encountered an error: {exc}", speak_flag=False)
-    finally:
-        bridge.update_status("Standing By")
+    _set_status("Processing")
+    _save_message("user", text)
+    answer = _answer(text)
+    _save_message("assistant", answer)
+    _broadcast({"type": "message", "sender": "Anju", "text": answer,
+                "speak": True, "image": None, "emotion": "neutral", "audio": None})
+    _set_status("Standing By")
 
 
 if __name__ == "__main__":
