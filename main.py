@@ -80,5 +80,11 @@ class AnjuAssistant:
         self.dashboard.run()  # blocks until server exits
 
 
+# WSGI entrypoint used by Vercel and other deployment platforms.
+# The instance is created at import time so `main:app` is discoverable.
+assistant = AnjuAssistant()
+app = assistant.dashboard.app
+
+
 if __name__ == "__main__":
-    AnjuAssistant().start()
+    assistant.start()
