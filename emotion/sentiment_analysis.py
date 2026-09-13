@@ -1,4 +1,3 @@
-from textblob import TextBlob
 import re
 
 def analyze_emotion(text: str) -> dict:
@@ -10,9 +9,11 @@ def analyze_emotion(text: str) -> dict:
         return {"sentiment": "neutral", "tone": "calm", "intensity": 0.0}
 
     q = text.lower()
-    blob = TextBlob(text)
-    polarity = blob.sentiment.polarity
-    subjectivity = blob.sentiment.subjectivity
+    positive_words = {"happy", "great", "amazing", "wonderful", "good", "love", "awesome"}
+    negative_words = {"sad", "unhappy", "bad", "hate", "awful", "terrible", "angry"}
+    words = set(re.findall(r"[a-z']+", q))
+    polarity = (len(words & positive_words) - len(words & negative_words)) / max(1, len(words))
+    subjectivity = min(1.0, (len(words & (positive_words | negative_words)) + 1) / max(2, len(words)))
 
     # 1. Advanced Keyword Mapping for Nuance
     emotion = "neutral"
