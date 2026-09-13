@@ -1,4 +1,3 @@
-import cv2
 import os
 
 def take_picture(filename: str = "capture.jpg"):
@@ -6,6 +5,7 @@ def take_picture(filename: str = "capture.jpg"):
     Captures a single frame from the default webcam and saves it.
     """
     try:
+        import cv2
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
             return "Error: Could not access the webcam."

@@ -1,4 +1,3 @@
-from fpdf import FPDF
 import os
 
 def generate_pdf(title: str, content: str, output_filename: str = "output.pdf") -> str:
@@ -6,6 +5,11 @@ def generate_pdf(title: str, content: str, output_filename: str = "output.pdf") 
     Generate a simple PDF document with a title and content.
     Returns the absolute path to the generated PDF.
     """
+    try:
+        from fpdf import FPDF
+    except ImportError as exc:
+        raise RuntimeError("PDF generation requires the fpdf2 package") from exc
+
     pdf = FPDF()
     pdf.add_page()
 

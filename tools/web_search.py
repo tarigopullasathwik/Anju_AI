@@ -1,10 +1,14 @@
-from duckduckgo_search import DDGS
 
 def search_web(query: str, max_results: int = 3) -> str:
     """
     Search the web using DuckDuckGo and return a summarized string of results.
     """
     import time
+    try:
+        from duckduckgo_search import DDGS
+    except ImportError:
+        return "Web search is unavailable because its optional dependency is not installed."
+
     for attempt in range(2):
         try:
             with DDGS() as ddgs:

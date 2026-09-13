@@ -2,9 +2,7 @@ import os
 import re
 import json
 
-from tools.pdf_generator import generate_pdf
 from tools.image_generator import generate_image
-from tools.web_search import search_web
 from automation.app_control import open_application
 from automation.system_tasks import shutdown_system
 from memory.memory import remember_fact, get_memory
@@ -164,6 +162,7 @@ def execute_task(user_prompt: str, action: str, params: dict) -> str:
     Executes a specific tool or automation based on the planner's output.
     """
     if action == "generate_pdf":
+        from tools.pdf_generator import generate_pdf
         title    = params.get("title", "Generated Document")
         content  = params.get("content", "This is an auto-generated PDF from your request.")
         filename = params.get("filename", "generated_doc.pdf")
