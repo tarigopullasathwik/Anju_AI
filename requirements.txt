@@ -11,7 +11,8 @@ flask-cors==6.0.2
 # ── Voice (TTS / STT) ─────────────────────────────────────────────────────────
 edge-tts==7.2.8
 SpeechRecognition==3.10.1
-PyAudio==0.2.14
+# PyAudio is intentionally omitted: Vercel's Linux build image has no PortAudio headers.
+# Browser microphone capture is used by the deployed UI instead.
 pyttsx3==2.90
 
 # ── File Processing ───────────────────────────────────────────────────────────

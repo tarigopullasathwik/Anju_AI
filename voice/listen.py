@@ -56,9 +56,14 @@ def listen() -> str:
     if is_speaking:
         return ""
 
-    with sr.Microphone() as source:
+    try:
+        microphone = sr.Microphone()
+    except (AttributeError, OSError) as e:
+        print(f"[Mic] Microphone unavailable: {e}")
+        return ""
 
-        try:
+    try:
+        with microphone as source:
             # Small ambient calibration
             _recognizer.adjust_for_ambient_noise(
                 source,
@@ -93,39 +98,39 @@ def listen() -> str:
 
             return ""
 
-        # ----------------------------------
-        # Speech not understood
-        # ----------------------------------
+    # ----------------------------------
+    # Speech not understood
+    # ----------------------------------
 
-        except sr.UnknownValueError:
-            return ""
+    except sr.UnknownValueError:
+        return ""
 
-        # ----------------------------------
-        # API / internet issue
-        # ----------------------------------
+    # ----------------------------------
+    # API / internet issue
+    # ----------------------------------
 
-        except sr.RequestError as e:
-            print(f"[Mic] API Service Error: {e}")
+    except sr.RequestError as e:
+        print(f"[Mic] API Service Error: {e}")
 
-            # Prevent rapid retries
-            time.sleep(2)
+        # Prevent rapid retries
+        time.sleep(2)
 
-            return ""
+        return ""
 
-        # ----------------------------------
-        # No speech detected
-        # ----------------------------------
+    # ----------------------------------
+    # No speech detected
+    # ----------------------------------
 
-        except sr.WaitTimeoutError:
-            return ""
+    except sr.WaitTimeoutError:
+        return ""
 
-        # ----------------------------------
-        # Any other issue
-        # ----------------------------------
+    # ----------------------------------
+    # Any other issue
+    # ----------------------------------
 
-        except Exception as e:
-            print(f"[Mic] Error: {e}")
+    except Exception as e:
+        print(f"[Mic] Error: {e}")
 
-            time.sleep(1)
+        time.sleep(1)
 
-            return ""
+        return ""

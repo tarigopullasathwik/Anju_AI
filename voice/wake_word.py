@@ -21,7 +21,11 @@ class WakeWordDetector:
         self.wake_word = wake_word.lower()
         self.on_wake = on_wake
         self.recognizer = sr.Recognizer()
-        self.microphone = sr.Microphone()
+        try:
+            self.microphone = sr.Microphone()
+        except (AttributeError, OSError) as e:
+            print(f"[WakeWord] Microphone unavailable: {e}")
+            self.microphone = None
         self.stop_listening = None
         self.last_trigger_time = 0
         self.cooldown = 3  # seconds between triggers
@@ -60,7 +64,10 @@ class WakeWordDetector:
             print(f"[WakeWord] Error: {e}")
 
     def start(self):
-        """Start background wake-word listening."""
+        """Start background wake-word listening when a microphone is available."""
+        if self.microphone is None:
+            return False
+
         with self.microphone as source:
             self.recognizer.adjust_for_ambient_noise(source, duration=1)
         self.stop_listening = self.recognizer.listen_in_background(
