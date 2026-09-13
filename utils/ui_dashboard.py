@@ -12,9 +12,11 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD_DIR = os.path.join(ROOT_DIR, "uploads")
 
 class AnjuDashboard:
-    def __init__(self, host="127.0.0.1", port=5000):
-        self.host = host
-        self.port = port
+    def __init__(self, host=None, port=None):
+        # Bind to every interface so Vercel Sandbox can proxy the preview port.
+        # Keep the local default port, while allowing the runner to provide PORT.
+        self.host = host or os.getenv("HOST", "0.0.0.0")
+        self.port = int(port or os.getenv("PORT", "3000"))
         self.clients = set()
         self.clients_lock = threading.Lock()
 
