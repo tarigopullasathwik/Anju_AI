@@ -7,8 +7,16 @@ __pycache__/
 *.pyo
 
 # ── Virtual environments ───────────────────────────────────────────────────────
+.venv/
 venv/
 venv_312/
+
+# ── Local-only tools and scratch tests ─────────────────────────────────────────
+adb_tools/
+scratch/
+__pycache__/
+*.py[cod]
+.vercel/
 
 # ── Generated output ───────────────────────────────────────────────────────────
 output/
